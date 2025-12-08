@@ -27,16 +27,17 @@
           (message "Compilation of `straight-utils-module' succeeded")
         (error "Compilation of `straight-utils-module' module failed!")))))
 
+(unless (require 'straight-utils-module nil t)
+  (if (y-or-n-p "Straight-Utils needs `straight-utils-module' to work.  Compile it now? ")
+      (progn
+	(straight-utils-module-compile)
+	(require 'straight-utils-module))
+    (error "Straight-Utils will not work until `straight-utils-module' is compiled!")))
+
 ;;;###autoload
 (defun straight-utils-pull-all ()
   "Update all repos."
   (interactive)
-  (unless (require 'straight-utils-module nil t)
-    (if (y-or-n-p "Straight-Utils needs `straight-utils-module' to work.  Compile it now? ")
-	(progn
-	  (straight-utils-module-compile)
-	  (require 'straight-utils-module))
-      (error "Straight-Utils will not work until `straight-utils-module' is compiled!")))
   (straight-utils-module-pull-all))
 
 (provide 'straight-utils)
