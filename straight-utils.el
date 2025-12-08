@@ -34,5 +34,10 @@
 	(require 'straight-utils-module))
     (error "Straight-Utils will not work until `straight-utils-module' is compiled!")))
 
+;;;###autoload
+(defun straight-utils-pull-all ()
+  "Update all repos."
+  (interactive)
+  (straight-utils-module-pull-all))
 
 (provide 'straight-utils)
