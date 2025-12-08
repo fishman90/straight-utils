@@ -86,11 +86,11 @@ fn pull_all(env: &Env) -> Result<()> {
         });
     });
 
-    pull_thread.join().unwrap();
     for msg in msg_rx {
         env.message(msg)?;
     }
 
+    pull_thread.join().unwrap();
     env.message("straight-utils-module-pull-all is finished!")?;
 
     Ok(())
