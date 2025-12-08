@@ -1,0 +1,97 @@
+use emacs::{Env, Result, defun};
+use git2::Repository;
+use rayon::prelude::*;
+use walkdir::DirEntry;
+
+emacs::plugin_is_GPL_compatible!();
+
+#[emacs::module(name(fn))]
+fn straight_utils_module(env: &Env) -> Result<()> {
+    env.message("straight-utils-module is loaded!")?;
+    Ok(())
+}
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
+}
+
+#[defun]
+fn pull_all(env: &Env) -> Result<()> {
+    let repos_root = env.call("straight--repos-dir", [])?;
+    let repos_root_str = repos_root.into_rust::<String>()?;
+
+    let (msg_tx, msg_rx) = crossbeam_channel::unbounded::<String>();
+
+    let pull_thread = std::thread::spawn(move || {
+        let repos: Vec<_> = walkdir::WalkDir::new(&repos_root_str)
+            .max_depth(1)
+            .into_iter()
+            .filter_entry(|e| !is_hidden(e))
+            .collect();
+
+        let threads_num: usize = match std::env::var("RAYON_NUM_THREADS") {
+            Ok(val) => val.parse().unwrap(),
+            Err(err) => {
+                msg_tx
+                    .send(format!("parse RAYON_NUM_THREADS failed: {:?}", err))
+                    .unwrap();
+                6
+            }
+        };
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads_num)
+            .build()
+            .unwrap();
+        pool.install(|| {
+            repos.into_par_iter().for_each(|repo_dir| {
+                let repo_dir = repo_dir.unwrap();
+                let git_repo = match Repository::open(repo_dir.path()) {
+                    Ok(repo) => repo,
+                    Err(err) => {
+                        msg_tx
+                            .send(format!(
+                                "failed to open repo {:?} with error: {:?}",
+                                repo_dir.path().display(),
+                                err,
+                            ))
+                            .unwrap();
+                        return;
+                    }
+                };
+
+                let mut remote = git_repo.find_remote("origin").unwrap();
+                let result = remote.fetch(&["main", "master"], None, None);
+                if result.is_err() {
+                    msg_tx
+                        .send(format!(
+                            "failed to update repo {:?} with error: {:?}",
+                            repo_dir.path().display(),
+                            result.unwrap(),
+                        ))
+                        .unwrap();
+                    return;
+                }
+
+                let fetch_head = git_repo.find_reference("FETCH_HEAD").unwrap();
+                let fetch_commit = git_repo.reference_to_annotated_commit(&fetch_head).unwrap();
+                let fetch_oid = fetch_commit.id();
+
+                let obj = git_repo.find_object(fetch_oid, None).unwrap();
+                git_repo.reset(&obj, git2::ResetType::Hard, None).unwrap();
+            });
+        });
+    });
+
+    pull_thread.join().unwrap();
+    for msg in msg_rx {
+        env.message(msg)?;
+    }
+
+    env.message("straight-utils-module-pull-all is finished!")?;
+
+    Ok(())
+}
