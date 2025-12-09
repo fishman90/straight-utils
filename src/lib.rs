@@ -1,7 +1,8 @@
+use std::fs;
+
 use emacs::{Env, Result, defun};
 use git2::Repository;
 use rayon::prelude::*;
-use walkdir::DirEntry;
 
 emacs::plugin_is_GPL_compatible!();
 
@@ -9,14 +10,6 @@ emacs::plugin_is_GPL_compatible!();
 fn straight_utils_module(env: &Env) -> Result<()> {
     env.message("straight-utils-module is loaded!")?;
     Ok(())
-}
-
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s.starts_with("."))
-        .unwrap_or(false)
 }
 
 #[defun]
@@ -27,18 +20,22 @@ fn pull_all(env: &Env) -> Result<()> {
     let (msg_tx, msg_rx) = crossbeam_channel::unbounded::<String>();
 
     let pull_thread = std::thread::spawn(move || {
-        let repos: Vec<_> = walkdir::WalkDir::new(&repos_root_str)
-            .max_depth(1)
-            .into_iter()
-            .filter_entry(|e| !is_hidden(e))
-            .collect();
+        let repos = fs::read_dir(&repos_root_str)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|e| {
+                e.is_dir() && (e.file_name().unwrap() != "." || e.file_name().unwrap() != "..")
+            })
+            .collect::<Vec<_>>();
 
         let threads_num: usize = match std::env::var("RAYON_NUM_THREADS") {
             Ok(val) => val.parse().unwrap(),
             Err(err) => {
-                msg_tx
-                    .send(format!("parse RAYON_NUM_THREADS failed: {:?}", err))
-                    .unwrap();
+                if err != std::env::VarError::NotPresent {
+                    msg_tx
+                        .send(format!("parse RAYON_NUM_THREADS failed: {:?}", err))
+                        .unwrap();
+                }
                 6
             }
         };
@@ -48,14 +45,13 @@ fn pull_all(env: &Env) -> Result<()> {
             .unwrap();
         pool.install(|| {
             repos.into_par_iter().for_each(|repo_dir| {
-                let repo_dir = repo_dir.unwrap();
-                let git_repo = match Repository::open(repo_dir.path()) {
+                let git_repo = match Repository::open(repo_dir.display().to_string()) {
                     Ok(repo) => repo,
                     Err(err) => {
                         msg_tx
                             .send(format!(
                                 "failed to open repo {:?} with error: {:?}",
-                                repo_dir.path().display(),
+                                repo_dir.display(),
                                 err,
                             ))
                             .unwrap();
@@ -69,7 +65,7 @@ fn pull_all(env: &Env) -> Result<()> {
                     msg_tx
                         .send(format!(
                             "failed to update repo {:?} with error: {:?}",
-                            repo_dir.path().display(),
+                            repo_dir.display(),
                             result.unwrap(),
                         ))
                         .unwrap();
