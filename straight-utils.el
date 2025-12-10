@@ -1,3 +1,5 @@
+;;-*- lexical-binding: t; -*-
+
 (defvar straight-utils-install-buffer-name " *Install straight-utils* ")
 
 (defun straight-utils-module--cargo-is-available ()

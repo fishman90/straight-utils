@@ -44,14 +44,14 @@ fn pull_all(env: &Env) -> Result<()> {
             .build()
             .unwrap();
         pool.install(|| {
-            repos.into_par_iter().for_each(|repo_dir| {
-                let git_repo = match Repository::open(repo_dir.display().to_string()) {
+            repos.into_par_iter().for_each(|repo_path| {
+                let git_repo = match Repository::open(repo_path.display().to_string()) {
                     Ok(repo) => repo,
                     Err(err) => {
                         msg_tx
                             .send(format!(
                                 "failed to open repo {:?} with error: {:?}",
-                                repo_dir.display(),
+                                repo_path.display(),
                                 err,
                             ))
                             .unwrap();
@@ -65,7 +65,7 @@ fn pull_all(env: &Env) -> Result<()> {
                     msg_tx
                         .send(format!(
                             "failed to update repo {:?} with error: {:?}",
-                            repo_dir.display(),
+                            repo_path.display(),
                             result.unwrap(),
                         ))
                         .unwrap();
