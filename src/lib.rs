@@ -20,7 +20,7 @@ fn pull_all(env: &Env) -> Result<()> {
     let (msg_tx, msg_rx) = crossbeam_channel::unbounded::<String>();
 
     let pull_thread = std::thread::spawn(move || {
-        let repos = fs::read_dir(&repos_root_path_str)
+        let repo_paths = fs::read_dir(&repos_root_path_str)
             .unwrap()
             .map(|entry| entry.unwrap().path())
             .filter(|entry| {
@@ -37,15 +37,16 @@ fn pull_all(env: &Env) -> Result<()> {
                         .send(format!("parse RAYON_NUM_THREADS failed: {:?}", err))
                         .unwrap();
                 }
-                6
+                8
             }
         };
-        let pool = rayon::ThreadPoolBuilder::new()
+
+        let thread_pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads_num)
             .build()
             .unwrap();
-        pool.install(|| {
-            repos.into_par_iter().for_each(|repo_path| {
+        thread_pool.install(|| {
+            repo_paths.into_par_iter().for_each(|repo_path| {
                 let git_repo = match Repository::open(repo_path.display().to_string()) {
                     Ok(repo) => repo,
                     Err(err) => {
@@ -88,6 +89,7 @@ fn pull_all(env: &Env) -> Result<()> {
     }
 
     pull_thread.join().unwrap();
+
     env.message("straight-utils-module-pull-all is finished!")?;
 
     Ok(())
