@@ -14,17 +14,18 @@ fn straight_utils_module(env: &Env) -> Result<()> {
 
 #[defun]
 fn pull_all(env: &Env) -> Result<()> {
-    let repos_root = env.call("straight--repos-dir", [])?;
-    let repos_root_str = repos_root.into_rust::<String>()?;
+    let repos_root_path = env.call("straight--repos-dir", [])?;
+    let repos_root_path_str = repos_root_path.into_rust::<String>()?;
 
     let (msg_tx, msg_rx) = crossbeam_channel::unbounded::<String>();
 
     let pull_thread = std::thread::spawn(move || {
-        let repos = fs::read_dir(&repos_root_str)
+        let repos = fs::read_dir(&repos_root_path_str)
             .unwrap()
-            .map(|e| e.unwrap().path())
-            .filter(|e| {
-                e.is_dir() && (e.file_name().unwrap() != "." || e.file_name().unwrap() != "..")
+            .map(|entry| entry.unwrap().path())
+            .filter(|entry| {
+                entry.is_dir()
+                    && (entry.file_name().unwrap() != "." || entry.file_name().unwrap() != "..")
             })
             .collect::<Vec<_>>();
 
