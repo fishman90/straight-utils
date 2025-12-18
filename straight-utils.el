@@ -26,15 +26,15 @@
       (if (zerop
 	   (let ((inhibit-read-only t))
              (call-process "sh" nil buffer t "-c" build-commands)))
-          (message "Compilation of `straight-utils-module' module succeeded!")
-        (error "Compilation of `straight-utils-module' module failed!")))))
+          (message "Compilation of `straight-utils-module` module succeeded!")
+        (error "Compilation of `straight-utils-module` module failed!")))))
 
 (unless (require 'straight-utils-module nil t)
-  (if (y-or-n-p "straight-utils needs `straight-utils-module' module to work. Compile it now?")
+  (if (y-or-n-p "straight-utils needs `straight-utils-module` module to work. Compile it now?")
       (progn
 	(straight-utils-module-compile)
 	(require 'straight-utils-module))
-    (error "straight-utils will not work until `straight-utils-module' module is compiled!")))
+    (error "straight-utils will not work until `straight-utils-module` module is compiled!")))
 
 ;;;###autoload
 (defun straight-utils-pull-all ()
