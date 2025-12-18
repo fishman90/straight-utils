@@ -4,7 +4,7 @@
 
 (defun straight-utils-module-check-cargo-is-available ()
   (unless (executable-find "cargo")
-    (error "straight-utils needs Rust to be compiled.  Please install Rust!"))
+    (error "straight-utils-module module needs Rust to be compiled.  Please install Rust!"))
   t)
 
 ;;;###autoload
@@ -30,7 +30,7 @@
         (error "Compilation of `straight-utils-module' module failed!")))))
 
 (unless (require 'straight-utils-module nil t)
-  (if (y-or-n-p "straight-utils needs `straight-utils-module' to work. Compile it now?")
+  (if (y-or-n-p "straight-utils needs `straight-utils-module' module to work. Compile it now?")
       (progn
 	(straight-utils-module-compile)
 	(require 'straight-utils-module))
