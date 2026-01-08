@@ -90,7 +90,7 @@ fn pull_all(env: &Env) -> Result<()> {
 
     pull_thread.join().unwrap();
 
-    env.message("straight-utils-module-pull-all is finished!")?;
+    env.message("all packages are updated!")?;
 
     Ok(())
 }
