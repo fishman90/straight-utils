@@ -4,7 +4,7 @@
 
 (defun straight-utils-module-check-cargo-is-available ()
   (unless (executable-find "cargo")
-    (error "`straight-utils-module` module needs Rust to be compiled.  Please install Rust!"))
+    (error "`straight-utils-module` module needs Rust to be compiled. Please install Rust!"))
   t)
 
 ;;;###autoload
